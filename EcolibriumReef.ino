@@ -1,22 +1,12 @@
-//*** Ecolibrium Reef
+//*** EcolibriumReef ***//
 //*** Application - Aquarium Control.
 //***   Tested on Arduino Nano compatible.
-//***   Upload using ATmega328P (Old Bootloader)
+//***   Processor: ATmega328P (Old Bootloader)
 
 
-//                            ( TESTED 2020-03-11 )
-
-
-//*** Rev 21                        
-//*** Optimized timer functions
-//*** Tested run time for each function
-//*** Removed air temperature display
-//*** Changed LCD backlight timer to PST (removed PDT timer variables)
-//*** Changed fan control temperatures
-//*** Added functions to save/retrieve atoMaxDuration & atoBypassDuration to/from EEPROM
-//*** Added function to countdown remaining time for auto top-off bypass
-
-//*** Buzzer to be added: sounds when atoBypass time is up. Buzzer will stop after five minutes or can be reset using Android app
+//*** Rev 1 ***//
+//***   ( TESTED 2020-05-08 )
+//*** Initial release
 
 
 //*** Power Supply ***//
@@ -28,7 +18,7 @@
 //***   -5VDC        - GND
 
 
-//*** 4-Channel Relay (light & fans) ***//
+//*** 4-Channel Relay (control light & fans) ***//
 //*** Relay specifications:
 //***   SRD-05VDC-SL-C 
 //***     SRD: Model
@@ -69,7 +59,7 @@
 //***   IN4   - pin 6   JMC/DATECH fan 
 
 
-//*** 4-Channel Relay (solenoid valves) ***//
+//*** 4-Channel Relay (control solenoid valves) ***//
 //*** Relay specifications:
 //***   SRD-05VDC-SL-C 
 //***     SRD: Model
@@ -77,7 +67,7 @@
 //***     S: Sealed type structure.
 //***     L: Coil sensitivity 0.36W
 //***     C: Contact rating (10A, 250VAC)
-//***   These relay board input controls are ACTIVE LOW, which means set them LOW turn them ON.
+//***   These relay board input controls are ACTIVE LOW, which means set them LOW turns them ON.
 //***   Each relay draws 72mA (0.36W / 5V = 0.072A).
 //***   For complete opto-isolation, remove JD-VCC jumper, connect JD to external 5V & GND to external GND, connect VCC to Arduino +5V
 //*** Solenoid specifications:
@@ -85,7 +75,7 @@
 //***   Stainless steel normally closed solenoid valve
 //***   120VAC, 115psi, 1/4" NPT port with 1/4" quick-connect fitting, 0.125 orifice, 0.4Cv value.
 //*** Functions:
-//***   Control four solenoid valves.
+//***   Control 4 solenoid valves.
 //*** Connections:
 //***   Relay - Arduino
 //***   VCC   - VIN (from 2.1A power supply)
@@ -103,10 +93,10 @@
 //***   Device MAC address: 20:16:06:15:28:98
 //***   HC-05 must be paired with Android device first (passcode: 1234)
 //*** Functions:
-//***   Communicate with Android device through a software serial port controlled by AltSoftSerial.
+//***   Communicate with Android device using AltSoftSerial.
 //***   AltSoftSerial can simultaneously transmit & receive.
 //***     Slower baud rates are recommended (9600 is used).
-//***     AltSoaftSerial uses pin 8 (TX), pin 9 (RX) & pin 10 (State)
+//***     AltSoftSerial uses pin 8 (TX), pin 9 (RX) & pin 10 (State)
 //***     AltSoftSerial uses a 16 bit timer, so pin 10 PWM is disabled, however digitalRead() or digitalWrite() will work normally
 //***   Below is the list of byte commands from Android
 //***     127 COMMAND_SYNCH
@@ -129,8 +119,8 @@
 //***       Valve 2 On      0010 0000
 //***       Valve 3 On      0100 0000
 //***       Valve 4 On      1000 0000
-//***   To acknowledge COMMAND_SYNCH from Android, Arduino immediately sends back COMMAND_PERIODIC_SYNCH followed by followed by 27 bytes (28 total):
-//***     ato state (1), atoBypass (1), atoMaxDuration (1), atoBypassDuration (1), ph (3), water temperature (7), air temperature (7), humidity (6)
+//***   Arduino sends 28 bytes to Android every second:
+//***     COMMAND_SYNCH (1), ato state (1), atoBypass (1), atoMaxDuration (1), atoBypassDuration (1), ph (3), water temperature (7), air temperature (7), humidity (5), COMMAND_SYNCH (1)
 //*** Connections:
 //***   HC-05 - Arduino
 //***   State - pin 10
@@ -139,13 +129,6 @@
 //***   GND   - GND
 //***   VCC   - 5V (range 3.6V to 6V)
 //***   EN    - not used
-
-
-//*** LED blinker ***//
-//*** Functions:
-//***   Blink when auto top-off is disable
-//*** Connections:
-//***   Pin 13 - LED - 420 ohm resistor - GND
 
 
 //*** Temperature Sensor ***//
@@ -162,21 +145,20 @@
 //***   From left to right
 //***   DS18B20                       - Arduino
 //***   Pin 1 (black)                 - GND
-//***   Pin 2 (white data)            - Pin 15 (A1)
+//***   Pin 2 (white data)            - Pin A1
 //***   Pin 2 (white data) - 4.7k Ohm - 5v
 //***   Pin 3 (red)                   - 5V
 
 
-//*** Double Float Switch ***//
+//*** Float Switch ***//
 //*** Specifications:
 //***   Stainless steel
 //*** Functions:
 //***   Detect water level & trigger auto top-off solenoids on/off.
 //*** Connections:
-//***   Float Switch              - Arduino
-//***   Yellow lead (upper float) - Pin 14 (A0) (currently not used)
-//***   Red lead (lower float)    - Pin 16 (A2)
-//***   Black lead                - GND (use internal pull-up resistor)
+//***   Float Switch - Arduino
+//***   Lead1        - Pin A2
+//***   Lead2        - GND (use internal pull-up resistor)
 
 
 //*** Air Temperature & Humidity Sensor ***//
@@ -187,7 +169,7 @@
 //*** Connections (from left to right)
 //***   DHT22                       - Arduino
 //***   Pin 1 (+)                   - 5V
-//***   Pin 2 (data)                - Pin 17 (A3)
+//***   Pin 2 (data)                - Pin A3
 //***   Pin 2 (data) - 10k resistor - 5V
 //***   Pin 3                       - not used
 //***   Pin 4 (-)                   - GND
@@ -199,14 +181,14 @@
 //***   Uses rechargeable backup battery CR2032.
 //*** Functions:
 //***   RTC & Arduino clocks are set to Pacific Standard time (PST).
-//***   Clock is set everytime Android send COMMAND_SYNCH.
+//***   Clock is synchronized everytime Android sends COMMAND_SYNCH.
 //***   Light timers are set to Pago Pago time which is 3 hours behind PST.
 //*** Connections:
 //***   RTC - Arduino
 //***   GND - GND
 //***   VCC - 5V
-//***   SDA - Pin 18 (A4)
-//***   SCL - Pin 19 (A5)
+//***   SDA - Pin A4
+//***   SCL - Pin A5
 
 
 //*** Liquid Crystal Display (LCD) ***//
@@ -219,27 +201,15 @@
 //***   LCD - Arduino
 //***   GND - GND
 //***   VCC - 5V
-//***   SDA - Pin 18 (A4)
-//***   SCL - Pin 19 (A5)
-
-
-//*** Buzzer ***//
-//*** Specifications:
-//***   Active buzzer module
-//*** Functions:
-//***   Beeps when ato bypass time is up
-//*** Connections:
-//***   Buzzer - Arduino
-//***   GND    - GND
-//***   IO     - A7
-//***   VCC    - 5V
+//***   SDA - Pin A4
+//***   SCL - Pin A5
 
 
 //*** Momentary button ***//
 //*** Functions:
 //***   Reset
 //*** Connections:
-//***   Button   Arduino
+//***   Button - Arduino
 //***   Lead 1 - Reset
 //***   Lead 2 - GND
 
@@ -255,30 +225,28 @@
 
 
 //*** Global variables ***//
-#define DISABLED 0                                // ato states
-#define ENABLED  1
-
-#define OFF      0                                // ato bypass states
-#define ON       1
-#define DONE     2
+#define DISABLED  0                          // ato states
+#define ENABLED   1
+#define OFF       0                          // ato bypass states
+#define ON        1
 
 
 //*** Arduino Pins Configuration ***//
-const byte hardwareRx        = 0;                 //    (not used)(need to check if these two pins can be used for float switch)
+const byte hardwareRx        = 0;                 //    (not used)
 const byte hardwareTx        = 1;                 //    (not used)
-const byte relayPin[8] = {12,11,7,6,5,4,3,2};     // full spectrum lights, blue lights, double fan, single fan, valve 1, valve 2, valve 3, valve 4 
+const byte relayPin[8] = {12,11,7,6,5,4,3,2};     // full spectrum (white) lights, blue lights, fan1, fan2, valve 1, valve 2, valve 3, valve 4 
 const byte bluetoothTxPin    = 8;                 // AltSoftSerial
 const byte bluetoothRxPin    = 9;                 // AltSoftSerial
 const byte bluetoothStatePin = 10;                // AltSoftSerial (read HIGH if Bluetooth devices are connected)
-const byte blinkerPin        = 13;                // on-board LED, also connected to LED on project box (not used)
-const byte upperFloatPin     = A0;                //    (assigned but not used)
-const byte dsPin             = A1;                //
-const byte lowerFloatPin     = A2;                // 
-const byte dhtPin            = A3;                // 
+const byte blinkerPin        = 13;                //    (not used)
+const byte A0Pin             = A0;                //    (not used)
+const byte dsPin             = A1;                // DS18B20 sensor
+const byte floatSwitchPin    = A2;
+const byte dhtPin            = A3;                // DHT22 sensor
 const byte SDAPin            = A4;                // LCD & RTC
 const byte SCLPin            = A5;                // LCD & RTC
-const byte A6Pin             = A6;                //    (not used) analog only 
-const byte buzzerPin         = A7;                //    (assigned but not used) analog only
+const byte A6Pin             = A6;                //    (not used)
+const byte A7Pin             = A7;                //    (not used)
 
 
 //*** AltSoftSerial ***//
@@ -354,14 +322,9 @@ float dsFahrenheit = 0;
 byte relayStates = 0;                             // current relays states
 byte relayStatesChanged = 0;
 byte savedRelayStates = 0;
-byte testMode = DISABLED;
 int fanState = 0;                                 // 0 = off; 1 = 1 fan on; 2 = 2 fans on 
+byte testMode = DISABLED;
 
-
-//*** Buzzer ***//
-unsigned long buzzerRepeatMillis = 0;
-unsigned long buzzerMillis = 0;
-boolean isBuzzing = false;
 
 //*** Misc Index ***//
 byte i;
@@ -391,7 +354,7 @@ void setup()
   dht.begin();
 
 // Setup float switch pin
-  pinMode(lowerFloatPin, INPUT_PULLUP);
+  pinMode(floatSwitchPin, INPUT_PULLUP);
 
 // Setup relay pins and make sure relays are inactive at reset or power on.
   for (i = 0; i < 8; i++)
@@ -400,9 +363,6 @@ void setup()
     digitalWrite(relayPin[i], HIGH);              // relays are active LOW, HIGH will turn relay off
   }
 
-// Setup buzzer pin
-  pinMode(buzzerPin, OUTPUT);                     // pinMode is already setup in tone function
- 
   t = now();                                      // function now() returns seconds since midnight 1/1/1970.                       
   s = t % 86400;                                  // now() mod [number of seconds per day 86400] = seconds since midnight today.
 
@@ -479,8 +439,6 @@ void loop()
 
     previous_s = s;
   }
-
-  set_buzzer();
 }
 
 
@@ -537,7 +495,7 @@ void read_water_temperature()
       int16_t raw = (ds_data[1] << 8) | ds_data[0];   // Convert the data to actual temperature, default is 12 bit
       dsFahrenheit = (float)raw / 16.0 * 1.8 + 32.0;  
 
-      if (dsFahrenheit > 82.0)                    // temperature reaches above 82.0°, turn both fans on
+      if (dsFahrenheit > 81.5)                    // temperature reaches above 81.5°, turn fan 2 on
       {
         if (fanState < 2)
         {
@@ -576,14 +534,14 @@ void read_float_switch()
 //*** After minimum time reached, if float switch reads HIGH, reset valve open timer, close solenoid valves.
 
 //*** SAFETY SWITCH.
-//*** Maximum valve-open time can be changed by ReefCon (Android app). 
+//*** Maximum valve-open time can be changed by Android app. 
 //*** If valves have been open for more than maximum time set but float switch has not kicked off, float switch might be faulty.
 //*** In which case, close solenoid valves, reset atoTimerStart, disable auto top-off.
-//*** A mannual reset is required using ReefCon.
+//*** A mannual reset is required using Android app, momentary button or reset button on Arduino.
 
   if (atoState == ENABLED)
   {
-    if (digitalRead(lowerFloatPin) == LOW)        // when water level is low, float switch reads LOW using internal pullup resistor
+    if (digitalRead(floatSwitchPin) == LOW)        // when water level is low, float switch reads LOW using internal pullup resistor
     {
       if (atoTimerStart == 0)                     // if solenoids have not been open (solenoid timer has not started)
       {
@@ -596,7 +554,7 @@ void read_float_switch()
         atoElapsedMillis = millis() - atoTimerStart;
         if (atoElapsedMillis >= atoMaxDurationMillis)
                                                   //*** SAFETY SWITCH ***//
-                                                  //   if solenoid valves have been longer than maximum set time
+                                                  //   if solenoid valves have been open longer than maximum set time
                                                   //   close solenoid valves, reset valve open timer and disable auto top-off
         {                                        
           reset_ato();
@@ -622,15 +580,15 @@ void reset_ato()
 {
   relayStates &= B10001111;                       // turn valves off: solenoids 1, 2, 3 (bits 4th, 5th, 6th)
   relayStatesChanged = B01110000;
-  atoTimerStart = 0;
+  atoTimerStart = 0;                              // reset timers to zero
   atoElapsedMillis = 0;
 }
 
 
 void bypass_ato()
 {
-//*** When atoBypass is enabled, atoState is saved and disabled
-//*** When atoBypass time is up, 
+//*** Auto top-off state is saved and disabled when ato bypass is running
+//*** Auto top-off state is restored when bypass is done
   
   if (atoBypassState == ON)                       // ato bypass is turned on manually
   {
@@ -647,7 +605,7 @@ void bypass_ato()
       {                                           // atoBypass time is up
         reset_ato_bypass();
         atoState = savedAtoState;
-        atoBypassState = DONE;                    // state is set to DONE, which will trigger buzzer
+        atoBypassState = OFF;
       }
     }  
   }
@@ -673,65 +631,6 @@ void relays_control()
     }
   }
   relayStatesChanged = B00000000;
-}
-
-
-void set_buzzer()
-{
-  // When ato bypass time is up, atoBypassState is set to DONE which will trigger the buzzer.
-  // Buzzer will beep repeatedly for 5 minutes; every 30 seconds; beep 3 times, one second apart
-  // After 5 minutes, atoBypassState will be changed to OFF.
-
-  if (atoBypassState == DONE)
-  {
-    if (buzzerRepeatMillis == 0)
-    {
-      buzzerRepeatMillis = millis();
-      buzzerMillis = millis();
-    }
-    else
-    {
-      if (millis() - buzzerRepeatMillis < 300000L)// buzzer repeats continuously for 5 minutes, every 30 seconds
-      {
-        unsigned long z = millis() - buzzerMillis;
-        if ((z > 0 && z <= 1000) || (z > 2000 && z <= 3000) || (z > 4000 && z <= 5000))
-        {                                         // 3 beeps, 1 second long, 1 second apart 
-          if (!isBuzzing)
-          {
-            lcd_print(0, 1, "B");                 // FOR TESTING PURPOSE ONLY
-
-            tone(buzzerPin, 4000);
-            isBuzzing = true;
-          }
-        }
-        else
-        {
-          if (isBuzzing)
-          {
-            lcd_print(0, 1, " ");                 // FOR TESTING PURPOSE ONLY
-
-            noTone(buzzerPin);
-            isBuzzing = false;
-          }
-        }
-        if (z > 30000) buzzerMillis = millis();   // reset buzzerMillis every 30 seconds
-      }
-      else                                        // time out after 5 minutes
-      {
-        reset_buzzer();                           // turn buzzer off, reset buzzer timers
-        atoBypassState = OFF;
-      }
-    }
-  }
-}
-
-
-void reset_buzzer()
-{
-  noTone(buzzerPin);
-  buzzerRepeatMillis = 0;
-  buzzerMillis = 0;
-  isBuzzing = false;
 }
 
 
@@ -794,20 +693,13 @@ void read_bluetooth()
           break;
         case COMMAND_ATO_BYPASS_ON:
           savedAtoState = atoState;
-          atoState = DISABLED; 
+          atoState = DISABLED;
           atoBypassState = ON;
           break;
         case COMMAND_ATO_BYPASS_OFF:
-          if (atoBypassState == ON)               // reset ato bypass and restore ato state if ato bypass is running
-          {
-            reset_ato_bypass();
-            atoState = savedAtoState;
-          }
-          else if (atoBypassState == DONE)
-          {
-            reset_buzzer();                       // turn buzzer off, reset buzzer timers
-          }
+          reset_ato_bypass();
           atoBypassState = OFF;
+          atoState = savedAtoState;
           break;
         case COMMAND_SET_ATO_MAX_DURATION:        // duration can only be set if ato and ato bypass are not running
           if (atoTimerStart == 0 && atoBypassState == OFF)
@@ -830,15 +722,18 @@ void read_bluetooth()
           atoState = DISABLED;
           savedRelayStates = relayStates;
           relayStates = 0;
+          relayStatesChanged = savedRelayStates;
           testMode = ENABLED;
           break;
         case COMMAND_TEST_MODE_DISABLE:
           atoState = savedAtoState;
           relayStates = savedRelayStates;
+          relayStatesChanged = relayStates;
           testMode = DISABLED;
           break;
         case COMMAND_TEST:
           relayStates = receiveBuffer[3];
+          relayStatesChanged = B11111111;
           break;
         default:;
       }
@@ -876,7 +771,6 @@ void write_bluetooth()
     sendBuffer[13] = 176;                         // character '°'
     sendBuffer[14] = 70;                          // character 'F'
 
-//  dtostrf(rtcFahrenheit, 5, 2, dtostrfBuffer);  // convert air temperatures into char array (5 bytes, 2 decimal places)
     dtostrf(dhtFahrenheit, 5, 2, dtostrfBuffer);  // convert air temperatures into char array (5 bytes, 2 decimal places)
     sendBuffer[15] = dtostrfBuffer[0];
     sendBuffer[16] = dtostrfBuffer[1];
@@ -909,8 +803,10 @@ void display_static_screen_info()
   lcd_print(6, 0, "-");                           // line 1: date string hyphens
   lcd_print(9, 0, "-");
   lcd_print(12, 1, 'M');                          // line 2
-  lcd_print(5, 2, "\xDF""F RO:  '");              // line 3
-  lcd_print(4, 3, "%H ATO:");                     // line 4
+  lcd_print(0, 2, "W:");                          // line 3
+  lcd_print(6, 2, "\xDF"" RO:  '");
+  lcd_print(0, 3, "A:");                          // line 4
+  lcd_print(6, 3, "\xDF""ATO:");
 }
 
 
@@ -942,10 +838,8 @@ void update_clock_display()                       // clock 12-hour format, ajust
 
 void update_temperatures_display()                // temperatures ad humidity
 {
-  lcd_print(0, 2, dsFahrenheit, 2);               // water temperature from DS18B20 sensor, 2 decimal places
-  lcd_print(0, 3, dhtHumidity, 1);                // relative humidity from DHT22 sensor, 1 decimal place
-//  lcd_print(0, 2, dhtFahrenheit, 2);              // air temperature from DHT22 sensor, 2 decimal places
-//  lcd_print(0, 2, rtcFahrenheit, 2);              // air temperature from DS3231 sensor, 2 decimal places
+  lcd_print(2, 2, dsFahrenheit, 1);               // water temperature from DS18B20 sensor, 1 decimal places
+  lcd_print(2, 3, dhtFahrenheit, 1);              // air temperature from DHT22 sensor, 1 decimal places
 }
 
 
@@ -956,38 +850,13 @@ void update_ato_bypass_display()
   {
     lcd_print(11, 2, (int)atoBypassDuration);
   }
-  else if (atoBypassState == ON)
+  else // (atoBypassState == ON)
   {
     int minutesRemaining = (int)((atoBypassDurationMillis - atoBypassElapsedMillis) / 60000L);
     if (atoBypassBlinkState) lcd_print(11, 2, minutesRemaining + 1);
     else lcd_print(11, 2, "  ");
     atoBypassBlinkState = !atoBypassBlinkState;
   }
-  else if (atoBypassState == DONE)
-  {
-    lcd_print(11, 2, atoBypassBlinkState ? "**" : "  ");
-    atoBypassBlinkState = !atoBypassBlinkState;
-  }
-
-/* need to check why switch does not work for case DONE
-  switch (atoBypassState)
-  {
-    case OFF:                                     // display duration
-      lcd_print(11, 2, (int)atoBypassDuration);
-      break;
-    case ON:                                      // blink remaining time
-      int minutesRemaining = (int)((atoBypassDurationMillis - atoBypassElapsedMillis) / 60000L);
-      if (atoBypassBlinkState) lcd_print(11, 2, minutesRemaining + 1);
-      else lcd_print(11, 2, "  ");
-      atoBypassBlinkState = !atoBypassBlinkState;
-      break;
-    case DONE:                                    // blink "**"
-      lcd_print(11, 2, atoBypassBlinkState ? "**" : "  ");
-      atoBypassBlinkState = !atoBypassBlinkState;
-      break;
-    default:;
-  }
-*/
 }
 
 
@@ -1016,11 +885,11 @@ void update_ato_display()
   }
   else // (atoState == DISABLE)
   {    
-    if (atoBypassState)                           // ato DISABLED because ato bypass is running
+    if (atoBypassState || testMode)               // ato is disabled because ato bypass is running or system is in test mode
     {                                             //    display "DIS"
       lcd_print(11, 3, "DIS");
     }
-    else // (not atobypassState)                  // ato DISABLED because something is wrong with auto top-off mechanism, either ato time out or faulty float switch
+    else // (not atobypassState)                  // ato is disabled because something is wrong with auto top-off mechanism, either ato time out or faulty float switch
     {                                             //    blink "DIS"
       lcd_print(11, 3, atoDisableBlinkState ? "DIS" : "   ");
       atoDisableBlinkState = !atoDisableBlinkState;
